@@ -11,39 +11,7 @@ It's timestamp?
 Maybe verify that a transaction receipt exists?
 Now you can! And at only 4430 execution gas, it's a steal.
 
-If you want to have a user generate RLP encoded header arrays from javascript, use this:
-
-		//Pass in a block produced from web3.eth.GetBlock
-		var encode = function(block) {
-			return  hexToBytes("f90205" + 
-						encode_with_length(block.parentHash.slice(2)) +
-						encode_with_length(block.sha3Uncles.slice(2)) +
-						encode_with_length(block.miner.slice(2)) +
-						encode_with_length(block.stateRoot.slice(2)) +
-						encode_with_length(block.transactionsRoot.slice(2)) +
-						encode_with_length(block.receiptsRoot.slice(2)) +
-						"b90100" + block.logsBloom.slice(2) + 
-						encode_with_length(block.difficulty.toString(16)) +
-						encode_with_length(block.number.toString(16)) + 
-						encode_with_length(block.gasLimit.toString(16)) + 
-						encode_with_length(block.gasUsed.toString(16)) + 
-						encode_with_length(block.timestamp.toString(16)) + 
-						encode_with_length(block.extraData.slice(2)) +
-						encode_with_length(block.mixHash.slice(2)) + 
-						encode_with_length(block.nonce.slice(2)))
-		}
-		
-		function hexToBytes(hex) {
-			for (var bytes = [], c = 0; c < hex.length; c += 2)
-			bytes.push(parseInt(hex.substr(c, 2), 16));
-			return bytes;
-		}
-
-		var encode_with_length = function(input) {
-			if(input.length % 2 != 0)
-				input = "0" + input;
-			return (input.length/2 + 128).toString(16) + input;
-		}
+Check out Web3EncodeRLPHeader.js for a way to generate an RLP encoded header from client-side web3.
 */
 
 library BlockHeaderValidation {

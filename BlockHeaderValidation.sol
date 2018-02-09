@@ -11,11 +11,15 @@ It's timestamp?
 Maybe verify that a transaction receipt exists?
 Now you can! And at only 4430 execution gas, it's a steal.
 
+NOTE: You cannot currently use this as a library as you would expect, my usage of "calldatacopy" 
+in assembly requires the transaction data to be in a very precise format. I'm working on conversion now.
+
 Check out Web3EncodeRLPHeader.js for a way to generate an RLP encoded header from client-side web3.
 */
 
-library BlockHeaderValidation {
-    struct Header {
+contract IngestBlockHeader {
+    
+    struct BlockHeader {
         bytes32 derivedHash;        
         bytes32 parentHash;         
         bytes32 ommersHash;         
@@ -37,18 +41,14 @@ library BlockHeaderValidation {
         uint32 gasUsed;             
         uint32 timeStamp;           
                                     
-        bytes32 logsBloom1;         
-        bytes32 logsBloom2;         
-        bytes32 logsBloom3;         
-        bytes32 logsBloom4;         
-        bytes32 logsBloom5;         
-        bytes32 logsBloom6;         
-        bytes32 logsBloom7;         
-        bytes32 logsBloom8;            
+        bytes logsBloom;
     }
     
-    function parseBlockHeader(bytes rlpData) public view returns (Header parsedHeader) {
+    function parseBlockHeader(bytes rlpData) public returns (BlockHeader) {
+        BlockHeader memory parsedHeader;
+        
         parsedHeader.derivedHash = keccak256(rlpData);
+        bytes memory logsBloom = new bytes(256);
         
         assembly {
             calldatacopy(add(parsedHeader,32), 72, 32)                  //parentHash
@@ -57,7 +57,8 @@ library BlockHeaderValidation {
             calldatacopy(add(parsedHeader,96), 159, 32)                 //stateRoot
             calldatacopy(add(parsedHeader,128), 192, 32)                //transactionsRoot
             calldatacopy(add(parsedHeader,160), 225, 32)                //receiptsRoot
-            calldatacopy(add(parsedHeader,480), 260, 256)               //logsBloom
+            
+            calldatacopy(add(logsBloom,32), 260, 256)                   //logsBloom
             
             let _size := sub(and(calldataload(485), 0xFF), 128)
             calldatacopy(add(parsedHeader,sub(352,_size)), 517, _size)  //difficulty
@@ -89,8 +90,9 @@ library BlockHeaderValidation {
             calldatacopy(add(parsedHeader,288), _idx, 8)                //nonce
         }
         
+        parsedHeader.logsBloom = logsBloom;
         
-        assert(parsedHeader.derivedHash == block.blockhash(parsedHeader.blockNumber));
+        require(parsedHeader.derivedHash == block.blockhash(parsedHeader.blockNumber));
         
         return parsedHeader;
     }

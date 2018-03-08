@@ -1,4 +1,5 @@
-I was trying to figure out why my "Virtual Struct" technique would save so much gas compared to using an in-memory solidity struct, so I spent some time combing over the execution stack from when a contract writes a memory struct to storage. 
+I was trying to figure out why my "Virtual Struct" technique would save so much gas compared to using an in-memory solidity struct, 
+so I spent some time combing over the execution stack from when a contract writes a memory struct to storage. 
 
 What I found was quite amusing to myself, but it doesn't really translate well if you don't read EVM opcodes.
 
@@ -6,15 +7,16 @@ To that end, I've written a short "play", which gives a more accessible peak at 
 
 I hope you like it:
 
-					<-- Hi! I'm Solc-y. The Solidity compiler helper. How can I help you today Mr Dappdev	
-						"Huh? But you've been helping me this whole time."
-					<-- Have I? I don't recall everyone that comes through. I'm a very important program.
-						"Uh.. yeah. You just finished my order for an in memory struct."
+			<-- Hi! I'm Solc-y. The Solidity compiler helper. How can I help you today Mr Dappdev	
+				"Huh? But you've been helping me this whole time."
+			<-- Have I? I don't recall everyone that comes through. I'm a very important program.
+				"Uh.. yeah. You just finished my order for an in memory struct."
 					<-- Oh! Of course. Those are my specialty.
-						"Right. So, I just need you to take that memory struct and put it into a storage array"
-					<-- Ok. If I'm following you correctly, it sounds like you want to push a memory struct into a storage array. Is that right?
+				"Right. So, I just need you to take that memory struct and put it into a storage array"
+	<-- Ok. If I'm following you correctly, it sounds like you want to push a memory struct into a storage array. Is that right?
 						"I just said that. But, yes. Do that."
 					<-- Piece of cake! Just watch the master at work.
+					
 0969 PUSH1 00		<-- Ok, have to start somewhere. 0 on the stack, which is the index of the array were storing to.
 0971 DUP1			
 0972 SLOAD			<-- Loading current length from the array were storing to.
@@ -106,9 +108,9 @@ I hope you like it:
 1010 DUP3				"Uh..."
 1011 ADD			<-- See. It's like magic. The value is exactly the same!
 1012 MLOAD			<-- Ok, now to compose the enum values that we want to write! 
-					<-- It looks like each enum property is stored in it's own memory address right now. Why'd you do that?
+			<-- It looks like each enum property is stored in it's own memory address right now. Why'd you do that?
 						"I didn't do that. You did."
-					<-- Hmmm? That doesn't sound like something I'd do. In any case, this will take some fancy twiddling to sort out.
+		<-- Hmmm? That doesn't sound like something I'd do. In any case, this will take some fancy twiddling to sort out.
 						"*Sigh*"
 1013 DUP2			<-- La la, never too many zeroes.
 1014 PUSH1 00			"Please don't tell me..."
@@ -161,7 +163,7 @@ I hope you like it:
 1082 PUSH1 40		<-- Oh. Fuck. I forgot about the rest of the properties again.
 1084 DUP3				"*glaring*"
 1085 ADD			<-- Don't make that face. We all make mistakes.
-1086 MLOAD			<-- How many are we writing again? 
+1086 MLOAD			<-- How many properties are we writing again? 
 1087 DUP2				"ALL OF THEM!"
 1088 PUSH1 00		<-- Jeez... No need to get snippy.
 1090 ADD
@@ -209,7 +211,7 @@ I hope you like it:
 1175 MUL
 1176 OR
 1177 SWAP1
-1178 SSTORE			<-- Yep. SSTORE after every modification. That's what you get for coming in here and telling me how to do my job.
+1178 SSTORE	<-- Yep. SSTORE after every modification. That's what you get for coming in here and telling me how to do my job.
 1179 POP
 1180 PUSH1 80
 1182 DUP3
@@ -235,7 +237,7 @@ I hope you like it:
 1207 MUL
 1208 OR
 1209 SWAP1
-1210 SSTORE			<-- Bet you feel silly now!
+1210 SSTORE			<-- Bet you feel like a jerk, now!
 1211 POP
 1212 PUSH1 a0
 1214 DUP3

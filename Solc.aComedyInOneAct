@@ -1,0 +1,269 @@
+I was trying to figure out why my "Virtual Struct" technique would save so much gas compared to using an in-memory solidity struct, so I spent some time combing over the execution stack from when a contract writes a memory struct to storage. 
+
+What I found was quite amusing to myself, but it doesn't really translate well if you don't read EVM opcodes.
+
+To that end, I've written a short "play", which gives a more accessible peak at the very special technique used by the compiler.
+
+I hope you like it:
+
+					<-- Hi! I'm Solc-y. The Solidity compiler helper. How can I help you today Mr Dappdev	
+						"Huh? But you've been helping me this whole time."
+					<-- Have I? I don't recall everyone that comes through. I'm a very important program.
+						"Uh.. yeah. You just finished my order for an in memory struct."
+					<-- Oh! Of course. Those are my specialty.
+						"Right. So, I just need you to take that memory struct and put it into a storage array"
+					<-- Ok. If I'm following you correctly, it sounds like you want to push a memory struct into a storage array. Is that right?
+						"I just said that. But, yes. Do that."
+					<-- Piece of cake! Just watch the master at work.
+0969 PUSH1 00		<-- Ok, have to start somewhere. 0 on the stack, which is the index of the array were storing to.
+0971 DUP1			
+0972 SLOAD			<-- Loading current length from the array were storing to.
+0973 DUP1			
+0974 PUSH1 01		<-- Incrementing the length of the array
+0976 ADD
+0977 DUP3
+0978 DUP2
+0979 PUSH2 03dc		<-- Were about to jump! Saving our return spot
+0982 SWAP2
+0983 SWAP1
+0984 PUSH2 099e		<-- Away we go! This is very important code we're jumping to. You'll see.
+---
+2462 JUMPDEST
+2463 DUP2			<-- Get our storage index again...
+2464 SLOAD			<-- ...to load the current length from the array were storing to. 
+2465 DUP2			   	"Wait... didn't we do this already?"
+2466 DUP4			<-- Oh yeah. I guess you're right, we should use the one from earlier.
+						"Uh..."
+2467 SSTORE			<-- Store the new length of the array.
+2468 DUP2			<-- Push Our new size.
+2469 DUP2			<-- Push Our old size.
+2470 ISZERO		   	"Oh. Are you checking if the array was previously empty?"
+2471 GT				
+2472 PUSH2 09c5		<-- Think you're some kind of expert eh? Well, think again...
+2475 JUMPI			<-- ...I'm checking to see if the array already existed. 
+2476 DUP2				"Isn't that what I said?"
+2477 DUP4			<-- Length and Location, back on the stack.
+2478 PUSH1 00		<-- Oh. Hold on. There's... something... in memory 0.
+2480 MSTORE			<-- Oh well. It's gone now. You didn't need that right?
+2481 PUSH1 20		 	"I have no idea. You put it there earlier. Probably not?"
+2483 PUSH1 00
+2485 SHA3			<-- Just need to calculate the storage bucket where our entry will go...
+2486 SWAP2
+2487 DUP3			<-- ...and save it for later.
+2488 ADD			<-- Storage bucket + 0! Can't have too many zeros.
+2489 SWAP2			
+2490 ADD			<-- Storage bucket + 1! 
+2491 PUSH2 09c4		"What's that for? The new head of our array? I don't really see where you're going with this..."
+2494 SWAP2
+2495 SWAP1
+2496 PUSH2 09ef
+2499 JUMP			<-- Another rabbit hole! Weeee!
+---
+2543 JUMPDEST
+2544 PUSH2 0a9d
+2547 SWAP2
+2548 SWAP1
+2549 JUMPDEST
+2550 DUP1				"I still don't see where this is going."
+2551 DUP3
+2552 GT				<-- Is x bigger than x+1? Probably not, but it doesn't hurt to make sure though. 
+2553 ISZERO			"Ok. Ok. I get it. We could overflow at some point."
+2554 PUSH2 0a99		
+2557 JUMPI			<-- Yep. See Mr smartypants. Trust the master. Onward!
+---
+2713 JUMPDEST
+2714 POP			<-- Didn't need that storage+1, since we didn't overflow. POP!
+2715 SWAP1			
+2716 JUMP			  	"Wait. We're jumping already? Why did we just jump to a single POP instruction...
+2717 JUMPDEST		<-- Just faking you out. Jumping to the very next line is a much more fun way to get there :D
+2718 SWAP1			"Those jumps aren't free you know..."
+2719 JUMP				"Wait.. what? Why did we just..."
+---
+2500 JUMPDEST			"What the hell was the point of that?"
+2501 JUMPDEST		<-- You should see the look on your face. Priceless. Alright. Alright. I won't mess around anymore.
+2502 POP				"Wait you just got rid of that storage location we computed!"
+2503 POP			<-- Hmmm? Oh yeah... That one was getting a bit stale.
+2504 POP				"Fuck it. I guess we're starting from scratch."
+2505 JUMP
+---
+0988 JUMPDEST			"Well... That was a waste of time. Back where we started. Nothing new in the stack."
+0989 SWAP2			<-- Yeah yeah. But we MIGHT have needed to do something!
+0990 PUSH1 00			
+0992 MSTORE			<-- Gotta make sure we clobber that 0 we wrote to memory earlier! Double zero!
+0993 PUSH1 20			"Are you drunk?"
+0995 PUSH1 00		<-- I would never drink on the job. And I resemble the insinuation.
+0997 SHA3				"Um... this looks familiar. GODDAMMIT! That's our storage bucket again. You literally JUST threw that away!"
+0998 SWAP1			<-- Yeah, well. I didn't need it then. Now I do. Sheesh.
+0999 ADD			
+1000 PUSH1 00
+1002 DUP5
+1003 SWAP1
+1004 SWAP2
+1005 SWAP1
+1006 SWAP2
+1007 POP
+1008 PUSH1 00		<-- Don't you just love adding zeros to things :) Nice and reliable outcome.
+1010 DUP3				"Uh..."
+1011 ADD			<-- See. It's like magic. The value is exactly the same!
+1012 MLOAD			<-- Ok, now to compose the enum values that we want to write! 
+					<-- It looks like each enum property is stored in it's own memory address right now. Why'd you do that?
+						"I didn't do that. You did."
+					<-- Hmmm? That doesn't sound like something I'd do. In any case, this will take some fancy twiddling to sort out.
+						"*Sigh*"
+1013 DUP2			<-- La la, never too many zeroes.
+1014 PUSH1 00			"Please don't tell me..."
+1016 ADD				"Oh for fucks sake."
+1017 PUSH1 00		<-- Here comes another zero!
+1019 PUSH2 0100			"Are you going to add it?"
+1022 EXP			<-- Nope! 0100^0! Didn't see that coming did you? Best way to get a 1 on the stack EVER.
+1023 DUP2				"..."
+1024 SLOAD			<-- Jeez. Tough crowd. Ok. Loading the current version of the storage location.  
+1025 DUP2				"But I needed a completely different memory value put in this bucket though..."
+1026 PUSH2 ffff		<-- Oh? I don't remember you saying that... Oh well. Gotta start somewhere, right?
+1029 MUL			
+1030 NOT			<-- Now to mask out where the value we pulled from memory goes in our struct.
+1031 AND				
+1032 SWAP1				"But we're completely overwriting the struct! This seems unnecessary."
+1033 DUP4
+1034 PUSH2 ffff		<-- Ok. Sliced out old value. Pasting in new value!
+1037 AND
+1038 MUL				"Are you just ignoring me now?"
+1039 OR				
+1040 SWAP1			
+1041 SSTORE			<-- And... put that struct back into storage. All done! =)
+1042 POP				"But... that was only the one property. There are still more."
+1043 PUSH1 20		<-- Huh? Oh right. 
+1045 DUP3			<-- I forgot that you had the struct all split up in different memory buckets for some reason.
+1046 ADD				"I don't manage memory. You do."
+1047 MLOAD			<-- Yeah. Yeah. Let's get cracking on the second property.
+1048 DUP2			
+1049 PUSH1 00
+1051 ADD
+1052 PUSH1 02
+1054 PUSH2 0100
+1057 EXP
+1058 DUP2
+1059 SLOAD			<-- Gotta pull that thing we just wrote to storage back out. 
+1060 DUP2				"Just be sure to do all the properties this time and not be so antsy to finish."
+1061 PUSH4 ffffffff	<-- Slicing out old value of property.
+1066 MUL
+1067 NOT
+1068 AND
+1069 SWAP1
+1070 DUP4
+1071 PUSH4 ffffffff	
+1076 AND			<-- Inserting new value of property.
+1077 MUL
+1078 OR
+1079 SWAP1
+1080 SSTORE			<-- And done!
+1081 POP				"uh..."
+1082 PUSH1 40		<-- Oh. Fuck. I forgot about the rest of the properties again.
+1084 DUP3				"*glaring*"
+1085 ADD			<-- Don't make that face. We all make mistakes.
+1086 MLOAD			<-- How many are we writing again? 
+1087 DUP2				"ALL OF THEM!"
+1088 PUSH1 00		<-- Jeez... No need to get snippy.
+1090 ADD
+1091 PUSH1 06
+1093 PUSH2 0100
+1096 EXP
+1097 DUP2
+1098 SLOAD
+1099 DUP2
+1100 PUSH1 ff		<-- Slicing out old value of property.
+1102 MUL
+1103 NOT
+1104 AND
+1105 SWAP1
+1106 DUP4
+1107 PUSH1 ff		<-- Inserting new value of property.
+1109 AND
+1110 MUL				"Seriously. Don't forget about the rest of the properties this time."
+1111 OR				<-- Yeah yeah. There are more properties after this. I'm not an idiot.
+1112 SWAP1				"I'm not so sure about that anymore."
+1113 SSTORE			<-- You know what, screw you. Now I'm doing it this way on purpose. 
+1114 POP			<-- It's not my gas I'm wasting, and you we're very rude.
+1115 PUSH1 60
+1117 DUP3
+1118 ADD
+1119 MLOAD
+1120 DUP2
+1121 PUSH1 00
+1123 ADD
+1124 PUSH1 07
+1126 PUSH2 0100
+1129 EXP
+1130 DUP2
+1131 SLOAD
+1132 DUP2
+1133 PUSH15 ffffffffffffffffffffffffffffff
+1149 MUL
+1150 NOT
+1151 AND
+1152 SWAP1
+1153 DUP4
+1154 PUSH18 010000000000000000000000000000000000
+1173 SWAP1
+1174 DIV
+1175 MUL
+1176 OR
+1177 SWAP1
+1178 SSTORE			<-- Yep. SSTORE after every modification. That's what you get for coming in here and telling me how to do my job.
+1179 POP
+1180 PUSH1 80
+1182 DUP3
+1183 ADD
+1184 MLOAD
+1185 DUP2
+1186 PUSH1 00
+1188 ADD
+1189 PUSH1 16
+1191 PUSH2 0100
+1194 EXP
+1195 DUP2
+1196 SLOAD
+1197 DUP2
+1198 PUSH1 ff
+1200 MUL
+1201 NOT
+1202 AND
+1203 SWAP1
+1204 DUP4
+1205 ISZERO
+1206 ISZERO
+1207 MUL
+1208 OR
+1209 SWAP1
+1210 SSTORE			<-- Bet you feel silly now!
+1211 POP
+1212 PUSH1 a0
+1214 DUP3
+1215 ADD
+1216 MLOAD
+1217 DUP2
+1218 PUSH1 00
+1220 ADD
+1221 PUSH1 17
+1223 PUSH2 0100
+1226 EXP
+1227 DUP2
+1228 SLOAD
+1229 DUP2
+1230 PUSH9 ffffffffffffffffff
+1240 MUL
+1241 NOT
+1242 AND
+1243 SWAP1
+1244 DUP4
+1245 PUSH9 ffffffffffffffffff
+1255 AND
+1256 MUL
+1257 OR
+1258 SWAP1
+1259 SSTORE			<-- There, all done. you ungrateful jerk. All of the properties. 
+1260 POP			<-- Next time you should think twice before using such a complicated type, eh?
+1261 POP			<-- Or at least don't split up all of your memory struct's entries into separate slots!
+1262 POP				"I told you before! You're the one that did that!"
+1263 POP				"Who's your manager? I want to file a complaint."
+					<-- Hi! I'm Solc-y. The Solidity compiler helper. How can I help you today Mr... Dappdev?

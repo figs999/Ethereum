@@ -94,7 +94,7 @@ I hope you like it:
 0992 MSTORE			<-- Gotta make sure we clobber that 0 we wrote to memory earlier! Double zero!
 0993 PUSH1 20			"Are you drunk?"
 0995 PUSH1 00		<-- I would never drink on the job. And I resemble the insinuation.
-0997 SHA3				"Um... this looks familiar. GODDAMMIT! That's our storage bucket again. You literally JUST threw that away!"
+0997 SHA3	"Uh... this looks familiar. GODDAMMIT! You're calculating our storage bucket again. You literally JUST threw that away!"
 0998 SWAP1			<-- Yeah, well. I didn't need it then. Now I do. Sheesh.
 0999 ADD			
 1000 PUSH1 00

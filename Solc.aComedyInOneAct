@@ -99,13 +99,16 @@ I hope you like it:
 0999 ADD			
 1000 PUSH1 00
 1002 DUP5
-1003 SWAP1
-1004 SWAP2
-1005 SWAP1
-1006 SWAP2
-1007 POP
+1003 SWAP1		<-- Swapity swap.
+1004 SWAP2			<-- Swap swap.
+1005 SWAP1			<-- Swap.
+1006 SWAP2				"Did you just do all that to get 0x60 at stack[2]?
+				<-- Ya. The zero at the top was in the way. Show me a way to do it quicker? Hmmm?
+					"But you added that zero right before... You could have just waited..."
+1007 POP		<-- What zero?		
+						"*facepalm*"
 1008 PUSH1 00		<-- Don't you just love adding zeros to things :) Nice and reliable outcome.
-1010 DUP3				"Uh..."
+1010 DUP3				"Uh... you just popped a zero?"
 1011 ADD			<-- See. It's like magic. The value is exactly the same!
 1012 MLOAD			<-- Ok, now to compose the enum values that we want to write! 
 			<-- It looks like each enum property is stored in it's own memory address right now. Why'd you do that?

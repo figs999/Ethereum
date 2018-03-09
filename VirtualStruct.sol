@@ -15,7 +15,7 @@ There are two primary benefits to using this technique rather than using a solid
 
 Comparitive Gas Costs of Below Contract Methods:
     Method                  Virtual Struct Cost             Normal Struct Cost      Optimizer Enabled
-    PlaceADiceBet           43240                           70278                   No
+    PlaceADiceBet           43788                           70278                   No
     LogBetProperties        11040                           12281                   No
     PlaceADiceBet           43249                           69362                   Yes
     LogBetProperties        11049                           10856                   Yes

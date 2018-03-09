@@ -14,22 +14,32 @@ There are two primary benefits to using this technique rather than using a solid
         can jam as much as possible into a single stack slot. Want to use 91 bits for something? Go ahead.
 
 Comparitive Gas Costs of Below Contract Methods:
-    Method                  Virtual Struct Cost             Normal Struct Cost
-    PlaceADiceBet           43788                           70278 
-    LogBetProperties        11040                           12281 
+    Method                  Virtual Struct Cost             Normal Struct Cost      Optimizer Enabled
+    PlaceADiceBet           43240                           70278                   No
+    LogBetProperties        11040                           12281                   No
+    PlaceADiceBet           43249                           69362                   Yes
+    LogBetProperties        11049                           10856                   Yes
 
 Notes:
-    It was my first instinct to implement the code for handling the structure in a library, since that 
-    would allow us to use "using X for Y" syntax to get the methods bound to our underlying data type.
+    My first version was compiled without the optimizer, which led me to believe that using the Virtual Struct method 
+    with a library would lead to extra overhead due to using delegatecall. Thanks to @chriseth for pointing out that
+    internal library calls shouldn't do this if the optimizer is turned on.
     
-    Unfortunately, this would mean that all of the calls to our structure's getters and setters would get
-    handled by delegate calls, and the parameters for those calls would get put into memory... eliminating
-    the first benefit listed above.
+    I left the unoptimized gas costs in for comparison, mainly because I found it intriguing that the method
+    which used the library actually DID add a tiny bit of overhead anyway and that the optimizer made the
+    act of reading a property from a solidity struct slightly more efficient than my method.
+    
+    Now I just need to comb through the opcodes of the optimized version of the built-in struct read to see
+    what it's doing differently! I must be wasting some gas somewhere...
+    
+    Also, I'm mulling on if the 9 gas it apparently costs to call a library method (extra jumps maybe?) is worth
+    cleaner looking code. I mean at current gas prices that's pretty negligible... but if the goal is to get the
+    gas cost as low as possible...
 */
 
 
 //A Sample "Virtual Struct"
-contract UsesBetRecord {
+library BetRecordLib {
     enum GameType { DrawPoker, SimpleDice, BlackJack, Keno }
     
     /**--Virtual Structure-----------
@@ -97,7 +107,9 @@ contract UsesBetRecord {
     function SetWageredWei  (bytes32 BetRecord, uint value)     internal pure returns (bytes32) { return            SetProperty( BetRecord, mask91, _WageredWei,    value       ); }
 }
 
-contract UsingAVirtualStruct is UsesBetRecord{
+contract UsingAVirtualStruct{
+    using BetRecordLib for bytes32;
+    
     bytes32[] BetRecords;
     mapping(address => uint16) player2ID;
     address[] registeredPlayers;
@@ -126,11 +138,11 @@ contract UsingAVirtualStruct is UsesBetRecord{
         require(playerID > 0);
         
         bytes32 BetRecord;
-        BetRecord = SetPlayerID(BetRecord, playerID);
-        BetRecord = SetRevealBlock(BetRecord, uint32(block.number+10));
-        BetRecord = SetType(BetRecord, GameType.SimpleDice);
-        BetRecord = SetWagerData(BetRecord, bytes15(number));
-        BetRecord = SetWageredWei(BetRecord, msg.value);
+        BetRecord = BetRecord.SetPlayerID(playerID);
+        BetRecord = BetRecord.SetRevealBlock(uint32(block.number+10));
+        BetRecord = BetRecord.SetType(BetRecordLib.GameType.SimpleDice);
+        BetRecord = BetRecord.SetWagerData(bytes15(number));
+        BetRecord = BetRecord.SetWageredWei(msg.value);
         
         uint betID = BetRecords.length;
         BetRecords.push(BetRecord);
@@ -141,11 +153,11 @@ contract UsingAVirtualStruct is UsesBetRecord{
     function LogBetProperties(uint betID) public {
         bytes32 BetRecord = BetRecords[betID];
         
-        uint pID = GetPlayerID(BetRecord);
-        uint RevealBlock = GetRevealBlock(BetRecord);
-        GameType gameType = GetType(BetRecord);
-        bytes15 wagerData = GetWagerData(BetRecord);
-        uint wager = GetWageredWei(BetRecord);
+        uint pID = BetRecord.GetPlayerID();
+        uint RevealBlock = BetRecord.GetRevealBlock();
+        BetRecordLib.GameType gameType = BetRecord.GetType();
+        bytes15 wagerData = BetRecord.GetWagerData();
+        uint wager = BetRecord.GetWageredWei();
         
         LogProperty("PlayerID", pID);
         LogProperty("RevealBlock", RevealBlock);

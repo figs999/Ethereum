@@ -1,11 +1,6 @@
 /*
 Author: Chance Santana-Wees
 Contact Email: figs999@gmail.com
-
-Pass in a block produced from web3.eth.GetBlock
-Out comes an array of bytes you can pass to the BlockHeaderValidator.sol contract code
-
-Note: This is a very simple RLP encoder, it won't encode anything but a block header into RLP.
 */
 
 var encodeRLPHeader = function(block) {
@@ -33,7 +28,6 @@ var encode_length = function(input, offset) {
 	if(L < 56) {
 		return (L + offset).toString(16);
 	} else {
-		encode_with_length
 		return encode_with_length(L.toString(16),55+offset);
 	}
 }

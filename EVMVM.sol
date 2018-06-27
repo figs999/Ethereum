@@ -12,19 +12,21 @@ avoid having to do dozens of different jumpi (10 gas per!) operations, which sho
 execution overhead relatively low.
 
 Notes:
-    This is a first draft of the concept, and has literally not even been successfully compiled, let alone
-	tested.
-	
-	I could probably hand translate the below code into raw opcodes, but I want to leave it at least moderately
-	high level to facilitate debugging. This means I need to comb through everything to do some stack balancing.
+    This is the first functional draft of the EVMVM. It actually works!
+    
+    For whatever reason I have to use an old compiler (0.4.6 seems to work) to get it to actually leave JUMPDESTs in.
+    	Which means that there are a handful of EVM opcodes that aren't possible to use.
+
+    If you don't want to handcode a bytecode function to run against this contract, a good way to test 
+    	it is to run it in Remix (with compiler 0.4.6) and use the following input:
+	["0x30","0x60","0x40","0x51","0x52","0x60","0x14","0x60","0x40","0x51","0x60","0x0c","0x01","0xa0"]
+	This is a test function which loads ADDRESS, stores it to memory, and then does a log0 of it.
 */
-
-pragma solidity ^0.4.18;
-
+pragma solidity ^0.4.0;
 contract CodeRunner {
     function RunCode(bytes script) public {
         assembly{
-			script 
+			0x1f
 			add //stack[0] becomes virtual program counter (vpc)
 		_VM:											//program counter is 0xA0 here
 			/*PUSH1*/ 
@@ -33,8 +35,8 @@ contract CodeRunner {
 			dup1 
 			mload 
 			/*PUSH1*/ 
-			0xff 
-			and //load next opcode from script stream
+			0x0
+			byte
 			/*PUSH1*/ 
 			0x5 
 			mul 
@@ -1597,16 +1599,10 @@ contract CodeRunner {
 			_VM	
 			jump	//jump to _VM loop entry
 		RETURNDATASIZE:	//δ0 opcode, no need to bury our vpc	
-			returndatasize
-			swap1	//α1 opcode, dig out our vpc
-			//PUSH1 
-			_VM	
+			INVALID	
 			jump	//jump to _VM loop entry
 		RETURNDATACOPY:
-			swap3
-			swap2
-			swap1	//δ3 opcode, bury our vpc
-			returndatacopy
+			INVALID
 			//PUSH1 //α0 opcode, no need to dig out our vpc
 			_VM	
 			jump	//jump to _VM loop entry
@@ -1925,6 +1921,7 @@ contract CodeRunner {
 			dup1	//get second copy of vpc
 			/*PUSH1*/
 			0x1F
+			swap1
 			sub 	//stack[0] now is index to load push value
 			mload	//stack[0] now is push value, with potential leading junk bytes
 			swap1
@@ -2268,20 +2265,11 @@ contract CodeRunner {
 			_VM	
 			jump	//jump to _VM loop entry
 		STATICCALL:				
-			swap6
-			swap5
-			swap4
-			swap3
-			swap2
-			swap1	//δ6 opcode, bury our vpc
-			staticcall
-			swap1	//α1 opcode, dig out our vpc
-			//PUSH1
-			_VM	
+		    	INVALID
 			jump	//jump to _VM loop entry
 		REVERT:
-			pop 	//δ2 opcode, but execution is halting, so just discard vpc
-			revert
+			INVALID
+			jump
 		INVALID:
 			stop	//should not be reachable... unless the program code is itself invalid
 		SELFDESTRUCT:

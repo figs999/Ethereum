@@ -29,12 +29,12 @@ contract CodeRunner {
 			0x1f
 			add //stack[0] becomes virtual program counter (vpc)
 		_VM:											//program counter is 0xA0 here
-			/*PUSH1*/ 
-			0x1 
-			add //increment vpc
-			dup1 
-			mload 
-			/*PUSH1*/ 
+			/*PUSH1*/ 			////The _VM subroutine reads a byte from 
+			0x1 				////the input data, specified by the vpc,
+			add //increment vpc		////and jumps to the correct subroutine
+			dup1 				////based on mathematical offset.
+			mload 				////The subroutines all perform the operation
+			/*PUSH1*/ 			////specified and then jump back to _VM
 			0x0
 			byte
 			/*PUSH1*/ 
